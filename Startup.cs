@@ -36,31 +36,23 @@ namespace UnexpectedEndOfRequestError
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             _Logger = app.ApplicationServices.GetService<ILogger<Startup>>();
+            
+            // Trying to enable req buffering using custom memory stream replacment
+            //app.Use(async (c, next) =>
+            //{
+            //    var bodyStream = ReadRewindeRequestBody(c);
+            //    await next.Invoke();
+            //});
+
+
+            // Trying to enable req buffering using built in helper
             app.Use(async (c, next) =>
             {
-                var bodyStream = ReadRewindeRequestBody(c);
+                c.Request.EnableBuffering();
+                _Logger.LogInformation($"[{c.TraceIdentifier}] in middleware 1 len {c.Request.ContentLength}, buffering enabled");
                 await next.Invoke();
             });
 
-            //app.Use(async (c, next) =>
-            //{
-            //    var req = c.Request;
-            //    req.EnableBuffering();
-            //    logger.LogInformation($"[{c.TraceIdentifier}] in middleware 1 len {req.ContentLength}");
-            //    var body = await GetRequestBodyStr(req);
-            //    logger.LogInformation($"[{c.TraceIdentifier}] in middleware 1 body {body}");
-
-            //    await next.Invoke();
-            //});
-
-            //app.Use(async (c, next) =>
-            //{
-            //    var req = c.Request;
-            //    logger.LogInformation($"[{c.TraceIdentifier}] in middleware 2 len {req.ContentLength}");
-            //    var body = await GetRequestBodyStr(req);
-            //    logger.LogInformation($"[{c.TraceIdentifier}] in middleware 5 body {body}");
-            //    await next.Invoke();
-            //});
 
             app.Run(async c =>
             {
@@ -87,15 +79,6 @@ namespace UnexpectedEndOfRequestError
             req.Body = ms;
             ms.Seek(0, SeekOrigin.Begin);
             return ms;
-        }
-
-        private static async Task<string> GetRequestBodyStr(HttpRequest request)
-        {
-            var buffer = new byte[Convert.ToInt32(request.ContentLength)];
-            await request.Body.ReadAsync(buffer, 0, buffer.Length);
-            request.Body.Seek(0, SeekOrigin.Begin);
-            var bodyAsText = Encoding.UTF8.GetString(buffer);
-            return bodyAsText;
         }
     }
 }
